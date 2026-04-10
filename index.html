@@ -356,22 +356,8 @@ const initials = users.map(getInitials).join(' ');
 
         const hasM = dayB.some(b => b.shifts.includes('morning'));
         const hasA = dayB.some(b => b.shifts.includes('afternoon'));
-		let tooltipText = "";
 
-if (hasM && hasA) {
-    tooltipText = "Fully booked today";
-} else if (hasM) {
-    const names = dayB.filter(b => b.shifts.includes('morning')).map(b => b.name);
-    tooltipText = `${names.join(', ')} is using this in the morning`;
-} else if (hasA) {
-    const names = dayB.filter(b => b.shifts.includes('afternoon')).map(b => b.name);
-    tooltipText = `${names.join(', ')} is using this in the afternoon`;
-} else {
-    tooltipText = "Available all day";
-}
-		btn.title = tooltipText;
-
-        let color = '#10b981'; // green
+		let color = '#10b981'; // green
         if (hasM && hasA) color = '#ef4444';
         else if (hasM || hasA) color = '#f59e0b';
 
@@ -384,12 +370,19 @@ if (hasM && hasA) {
 	btn.style.boxShadow = "0 8px 20px rgba(0,0,0,0.15)";
         btn.style.background = color;
         btn.style.transform = "translate(-50%, -50%)";
+    btn.title = tooltipText;
 
-btn.innerHTML = `
-    <i class="fas fa-microscope text-base"></i>
-    <span class="text-[9px] mt-0.5 opacity-90">#${id}</span>
-	 <div class="text-[10px] font-black tracking-widest mt-1">${initials}</div>
-`;
+    let color = '#10b981';
+    if (hasM && hasA) color = '#ef4444';
+    else if (hasM || hasA) color = '#f59e0b';
+
+    btn.style.background = color;
+
+    btn.innerHTML = `
+        <i class="fas fa-microscope text-base"></i>
+        <span class="text-[9px] mt-0.5 opacity-90">#${id}</span>
+        <div class="text-[10px] font-black tracking-widest mt-1">${initials}</div>
+    `;
         btn.onclick = () => {
     const dayB = bookings.filter(b => b.date === selectedDate && b.scopeId == id);
 
