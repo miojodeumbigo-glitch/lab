@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -169,9 +171,33 @@
     </div>
 
     <script>
-        const DATABASE_URL = "https://script.google.com/macros/s/AKfycbwdTM4aqV0ymNERic1aM7VcYovgSWwU8Z2skLos05LZgndZXtUGzYho_2SriTbRiUKCuw/exec";
+
+function cancelBooking(id) {
+    const booking = bookings.find(b => b.id === id);
+
+    if (!booking) return;
+
+    const isOwner = booking.name === currentResearcher;
+    const isAdmin = currentResearcher === ADMIN_NAME;
+
+    if (!isOwner && !isAdmin) {
+        alert("You can only cancel your own bookings.");
+        return;
+    }
+
+    if (!confirm("Cancel this booking? You sure? WHAT ABOUT PRODUCTIVITY?!?! Just kidding, make sure to let your colleagues know there's a free spot now.")) return;
+
+    bookings = bookings.filter(b => b.id !== id);
+
+    saveAndSync();
+}
+		
+		
+		
+		const DATABASE_URL = "https://script.google.com/macros/s/AKfycbwdTM4aqV0ymNERic1aM7VcYovgSWwU8Z2skLos05LZgndZXtUGzYho_2SriTbRiUKCuw/exec";
 
 const LAB_ACCESS_CODE = "labsolos";
+const ADMIN_NAME = "Edu";		
 
 const SCOPE_POSITIONS = [
     { id: 1, left: 10, top: 75 }, { id: 2, left: 25, top: 15 },
@@ -332,7 +358,20 @@ btn.innerHTML = `
     <i class="fas fa-microscope text-base"></i>
     <span class="text-[9px] mt-0.5 opacity-90">#${id}</span>
 `;
-        btn.onclick = () => openModal(id);
+        btn.onclick = () => {
+    const dayB = bookings.filter(b => b.date === selectedDate && b.scopeId == id);
+
+    const myBooking = dayB.find(b => b.name === currentResearcher);
+
+    if (myBooking) {
+        if (confirm("You already booked this. Cancel it?")) {
+            cancelBooking(myBooking.id);
+        }
+        return;
+    }
+
+    openModal(id);
+};
 
         room.appendChild(btn);
     }
@@ -356,11 +395,28 @@ function renderLog() {
 
     const sorted = [...bookings].sort((a, b) => b.date.localeCompare(a.date));
 
-    container.innerHTML = sorted.map(b => `
+   container.innerHTML = sorted.map(b => {
+    const isOwner = b.name === currentResearcher;
+    const isAdmin = currentResearcher === ADMIN_NAME;
+
+    return `
+    <div class="bg-slate-50 p-3 rounded-xl border flex justify-between items-center">
         <div>
-            <strong>${b.name}</strong> - Scope #${b.scopeId} (${b.date}) [${b.shifts.join(', ')}]
+            <div class="text-xs font-bold">${b.name}</div>
+            <div class="text-[10px] text-slate-500">
+                #${b.scopeId} • ${b.date} • ${b.shifts.join(', ')}
+            </div>
         </div>
-    `).join('');
+
+        ${(isOwner || isAdmin) ? `
+            <button onclick="cancelBooking(${b.id})"
+                class="text-red-500 text-xs font-bold px-2 py-1 rounded hover:bg-red-100">
+                ✕
+            </button>
+        ` : ""}
+    </div>
+    `;
+}).join('');
 }
 
 // ---------------- BOOKING ----------------
@@ -370,7 +426,7 @@ function openModal(id) {
     document.getElementById('booking-modal').classList.remove('hidden');
 }
 
-document.getElementById('booking-form').onsubmit = (e) => {
+document.getElementById('booking-form').onsubmit = async (e) => {
     e.preventDefault();
 
     const s = [];
@@ -379,13 +435,34 @@ document.getElementById('booking-form').onsubmit = (e) => {
 
     if (!s.length) return alert("Select shift!");
 
+    //  STEP 1: reload latest data
+    await loadBookings();
+
+    const scopeId = document.getElementById('form-scope-id').value;
+
+    const dayB = bookings.filter(b => b.date === selectedDate && b.scopeId == scopeId);
+
+    const hasM = dayB.some(b => b.shifts.includes('morning'));
+    const hasA = dayB.some(b => b.shifts.includes('afternoon'));
+
+    //  STEP 2: prevent conflicts
+    if ((s.includes('morning') && hasM) || (s.includes('afternoon') && hasA)) {
+        alert("⚠️ Oops! Someone just booked this slot. Unless you're sitting on their lap, please choose another.");
+        return;
+    }
+
+    //  STEP 3: safe to book
     bookings.push({
         id: Date.now(),
-        scopeId: document.getElementById('form-scope-id').value,
+        scopeId: scopeId,
         date: selectedDate,
         name: currentResearcher,
         shifts: s
     });
+
+    closeModal();
+    saveAndSync();
+};;
 
     closeModal();
     saveAndSync(); // 
@@ -409,7 +486,12 @@ function logout() {
 if (localStorage.getItem('unlocked_v1') === 'true') showApp();
 
 document.getElementById('clear-data-btn').onclick = () => {
-    if (confirm("Wipe all data?")) {
+    if (currentResearcher !== ADMIN_NAME) {
+        alert("Who do you think you are to erase all the evidence? ONLY A GOD COULD DO THAT. No, really, if you need to clear the log (kinda sus, though), talk to Eduardo ");
+        return;
+    }
+
+    if (confirm("Wipe all laboratory data?")) {
         bookings = [];
         saveAndSync();
     }
