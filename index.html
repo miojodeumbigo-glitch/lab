@@ -350,11 +350,26 @@ function renderMap() {
 
     function createScope(id, x, y) {
         const dayB = bookings.filter(b => b.date === selectedDate && b.scopeId == id);
+		
 		const users = [...new Set(dayB.map(b => b.name))];
 const initials = users.map(getInitials).join(' ');
 
         const hasM = dayB.some(b => b.shifts.includes('morning'));
         const hasA = dayB.some(b => b.shifts.includes('afternoon'));
+		let tooltipText = "";
+
+if (hasM && hasA) {
+    tooltipText = "Fully booked today";
+} else if (hasM) {
+    const names = dayB.filter(b => b.shifts.includes('morning')).map(b => b.name);
+    tooltipText = `${names.join(', ')} is using this in the morning`;
+} else if (hasA) {
+    const names = dayB.filter(b => b.shifts.includes('afternoon')).map(b => b.name);
+    tooltipText = `${names.join(', ')} is using this in the afternoon`;
+} else {
+    tooltipText = "Available all day";
+}
+		btn.title = tooltipText;
 
         let color = '#10b981'; // green
         if (hasM && hasA) color = '#ef4444';
@@ -477,21 +492,8 @@ if (isWeekend) {
 
 
 
-	let tooltipText = "";
 
-if (hasM && hasA) {
-    tooltipText = "Fully booked today. (Lucky you!)";
-} else if (hasM) {
-    const names = dayB.filter(b => b.shifts.includes('morning')).map(b => b.name);
-    tooltipText = `${names.join(', ')} is using this in the morning`;
-} else if (hasA) {
-    const names = dayB.filter(b => b.shifts.includes('afternoon')).map(b => b.name);
-    tooltipText = `${names.join(', ')} is using this in the afternoon`;
-} else {
-    tooltipText = "Available all day. Yay!";
-}
 
-btn.title = tooltipText;
 	
     //  STEP 2: prevent conflicts
     if ((s.includes('morning') && hasM) || (s.includes('afternoon') && hasA)) {
