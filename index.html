@@ -183,7 +183,7 @@ function cancelBooking(id) {
     const isAdmin = currentResearcher === ADMIN_NAME;
 
     if (!isOwner && !isAdmin) {
-        alert("You can only cancel your own bookings.");
+        showToast("You can only cancel your own bookings.", "warning");
         return;
     }
 
@@ -268,7 +268,7 @@ async function saveAndSync() {
 
     } catch (err) {
         console.error("Save error:", err);
-        alert("Error syncing with database.");
+        showToast("Error syncing with database.", "error");
     }
 }
 
@@ -433,11 +433,24 @@ function openModal(id) {
 document.getElementById('booking-form').onsubmit = async (e) => {
     e.preventDefault();
 
+	const today = new Date(selectedDate);
+const day = today.getDay(); // 0 Sunday, 6 Saturday
+
+let isWeekend = (day === 0 || day === 6);
+
+if (isWeekend) {
+    const ok = await showWarning("No, seriously, what the hell?! WHY ARE YOU WORKING ON THE WEEKEND?! DON'T DO THAT! (Are you sure you want to book it? Like... really?)");
+    if (!ok) {
+        return; // user canceled → stop booking
+    }
+}
+
+	
     const s = [];
     if (document.getElementById('shift-morning').checked) s.push('morning');
     if (document.getElementById('shift-afternoon').checked) s.push('afternoon');
 
-    if (!s.length) return alert("Select shift!");
+    if (!s.length) return showToast("Select shift!", "warning");
 
     //  STEP 1: reload latest data
     await loadBookings();
@@ -451,7 +464,7 @@ document.getElementById('booking-form').onsubmit = async (e) => {
 
     //  STEP 2: prevent conflicts
     if ((s.includes('morning') && hasM) || (s.includes('afternoon') && hasA)) {
-        alert("⚠️ Oops! Someone just booked this slot. Unless you're sitting on their lap, please choose another.");
+        showToast("⚠️ Oops! Someone just booked this slot. Unless you're sitting on their lap, please choose another.", "warning");
         return;
     }
 
@@ -490,7 +503,7 @@ function logoClick() {
     // if clicked 5 times fast → show message
     if (logoClickCount >= 5) {
         logoClickCount = 0;
-        alert("Secret Lab Message: Don't you have anything better to do? WHY ARE YOU CLICKING HERE? LEAVE ME ALONE!");
+        showToast("Secret Lab Message: Don't you have anything better to do? WHY ARE YOU CLICKING HERE? LEAVE ME ALONE!", "warning");
     }
 }
 
@@ -504,7 +517,7 @@ if (localStorage.getItem('unlocked_v1') === 'true') showApp();
 
 document.getElementById('clear-data-btn').onclick = () => {
     if (currentResearcher !== ADMIN_NAME) {
-        alert("Who do you think you are to erase all the evidence? ONLY A GOD COULD DO THAT. No, really, if you need to clear the log (kinda sus, though), talk to Eduardo ");
+        showToast("Who do you think you are to erase all the evidence? ONLY A GOD COULD DO THAT. No, really, if you need to clear the log (kinda sus, though), talk to Eduardo ", "error");
         return;
     }
 
@@ -516,7 +529,77 @@ document.getElementById('clear-data-btn').onclick = () => {
 
 // AUTO REFRESH EVERY 5s
 setInterval(loadBookings, 5000);
+
+function showWarning(message) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById("warning-modal");
+        const text = document.getElementById("warning-text");
+        const okBtn = document.getElementById("warn-ok");
+        const cancelBtn = document.getElementById("warn-cancel");
+
+        text.innerText = message;
+        modal.classList.remove("hidden");
+
+        okBtn.onclick = () => {
+            modal.classList.add("hidden");
+            resolve(true);
+        };
+
+        cancelBtn.onclick = () => {
+            modal.classList.add("hidden");
+            resolve(false);
+        };
+    });
+}
+
+function showToast(message, type = "info") {
+    const container = document.getElementById("toast-container");
+
+    const colors = {
+        success: "bg-green-500",
+        error: "bg-red-500",
+        warning: "bg-yellow-500",
+        info: "bg-blue-500"
+    };
+
+    const toast = document.createElement("div");
+    toast.className = `
+        ${colors[type] || colors.info}
+        text-white font-bold px-4 py-3 rounded-xl shadow-lg
+        animate-pulse max-w-xs
+    `;
+
+    toast.innerText = message;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+		
+		
 </script>
 
+	<div id="warning-modal" class="hidden fixed inset-0 bg-slate-900/80 z-[999] flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center">
+        <h2 class="text-xl font-black text-red-600 mb-3">WARNING</h2>
+        <p id="warning-text" class="text-slate-700 font-bold mb-6"></p>
+
+        <div class="flex gap-3">
+            <button id="warn-cancel" class="flex-1 bg-slate-200 py-3 rounded-xl font-bold">
+                Cancel
+            </button>
+            <button id="warn-ok" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold">
+                Continue
+            </button>
+        </div>
+    </div>
+</div>
+
+	<div id="toast-container"
+     class="fixed top-5 right-5 z-[9999] space-y-3"></div>
+
+	
 </body>
 </html>
