@@ -210,6 +210,16 @@ const SCOPE_POSITIONS = [
 
 let bookings = [];
 let currentStartDate = new Date();
+
+function getInitials(name) {
+    return name
+        .split(' ')
+        .map(part => part[0])
+        .join('')
+        .toUpperCase();
+}		
+
+		
 		let logoClickCount = 0;
 let logoClickTimer = null;
 currentStartDate.setDate(currentStartDate.getDate() - currentStartDate.getDay());
@@ -340,6 +350,8 @@ function renderMap() {
 
     function createScope(id, x, y) {
         const dayB = bookings.filter(b => b.date === selectedDate && b.scopeId == id);
+		const users = [...new Set(dayB.map(b => b.name))];
+const initials = users.map(getInitials).join(' ');
 
         const hasM = dayB.some(b => b.shifts.includes('morning'));
         const hasA = dayB.some(b => b.shifts.includes('afternoon'));
@@ -361,6 +373,7 @@ function renderMap() {
 btn.innerHTML = `
     <i class="fas fa-microscope text-base"></i>
     <span class="text-[9px] mt-0.5 opacity-90">#${id}</span>
+	 <div class="text-[10px] font-black tracking-widest mt-1">${initials}</div>
 `;
         btn.onclick = () => {
     const dayB = bookings.filter(b => b.date === selectedDate && b.scopeId == id);
@@ -462,6 +475,24 @@ if (isWeekend) {
     const hasM = dayB.some(b => b.shifts.includes('morning'));
     const hasA = dayB.some(b => b.shifts.includes('afternoon'));
 
+
+
+	let tooltipText = "";
+
+if (hasM && hasA) {
+    tooltipText = "Fully booked today. (Lucky you!)";
+} else if (hasM) {
+    const names = dayB.filter(b => b.shifts.includes('morning')).map(b => b.name);
+    tooltipText = `${names.join(', ')} is using this in the morning`;
+} else if (hasA) {
+    const names = dayB.filter(b => b.shifts.includes('afternoon')).map(b => b.name);
+    tooltipText = `${names.join(', ')} is using this in the afternoon`;
+} else {
+    tooltipText = "Available all day. Yay!";
+}
+
+btn.title = tooltipText;
+	
     //  STEP 2: prevent conflicts
     if ((s.includes('morning') && hasM) || (s.includes('afternoon') && hasA)) {
         showToast("⚠️ Oops! Someone just booked this slot. Unless you're sitting on their lap, please choose another.", "warning");
