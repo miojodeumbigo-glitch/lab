@@ -192,7 +192,12 @@
 					
                 </div>
                 <button type="submit" class="w-full bg-slate-900 text-white font-black py-4 md:py-5 rounded-[20px] md:rounded-[24px] hover:bg-blue-600 transition-all uppercase tracking-widest text-xs shadow-lg">Confirm</button>
-            </form>
+            	/// add cancel button 
+				<button type="button" id="cancel-booking-btn"
+    class="w-full mt-2 bg-red-100 text-red-600 font-black py-3 rounded-[20px] hover:bg-red-200 uppercase tracking-widest text-xs hidden">
+    Cancel Booking
+</button>
+			</form>
         </div>
     </div>
 
@@ -460,6 +465,19 @@ function openModal(id) {
 
     //  find MY booking
     const myBooking = dayB.find(b => b.name === currentResearcher);
+	const cancelBtn = document.getElementById('cancel-booking-btn');
+
+if (myBooking) {
+    cancelBtn.classList.remove('hidden');
+    cancelBtn.onclick = () => {
+        if (confirm("Cancel your booking for this scope?")) {
+            cancelBooking(myBooking.id);
+            closeModal();
+        }
+    };
+} else {
+    cancelBtn.classList.add('hidden');
+}
 
     // 🧠 collect all taken slots
     const taken = dayB.flatMap(b => b.shifts);
