@@ -152,18 +152,21 @@
             <form id="booking-form" class="space-y-6 md:space-y-8">
                 <input type="hidden" id="form-scope-id">
                 <div class="space-y-3">
-                    <label class="flex items-center p-4 md:p-5 rounded-2xl border-2 border-slate-50 hover:bg-slate-50 cursor-pointer group transition-all">
-                        <input type="checkbox" id="shift-morning" class="w-5 h-5 md:w-6 md:h-6 rounded-lg text-blue-600 border-slate-300">
-                        <div class="ml-3 md:ml-4">
-                            <span class="block text-sm font-black text-slate-800">Morning (8-12h)</span>
-                        </div>
-                    </label>
-                    <label class="flex items-center p-4 md:p-5 rounded-2xl border-2 border-slate-50 hover:bg-slate-50 cursor-pointer group transition-all">
-                        <input type="checkbox" id="shift-afternoon" class="w-5 h-5 md:w-6 md:h-6 rounded-lg text-blue-600 border-slate-300">
-                        <div class="ml-3 md:ml-4">
-                            <span class="block text-sm font-black text-slate-800">Afternoon (14-18h)</span>
-                        </div>
-                    </label>
+<div class="grid grid-cols-2 gap-2 text-xs font-bold">
+    <label><input type="checkbox" value="08-09"> 8–9h</label>
+    <label><input type="checkbox" value="09-10"> 9–10h</label>
+    <label><input type="checkbox" value="10-11"> 10–11h</label>
+    <label><input type="checkbox" value="11-12"> 11–12h</label>
+    <label><input type="checkbox" value="12-13"> 12–13h</label>
+    <label><input type="checkbox" value="13-14"> 13–14h</label>
+    <label><input type="checkbox" value="14-15"> 14–15h</label>
+    <label><input type="checkbox" value="15-16"> 15–16h</label>
+    <label><input type="checkbox" value="16-17"> 16–17h</label>
+    <label><input type="checkbox" value="17-18"> 17–18h</label>
+    <label><input type="checkbox" value="18-19"> 18–19h</label>
+</div>
+					
+					
                 </div>
                 <button type="submit" class="w-full bg-slate-900 text-white font-black py-4 md:py-5 rounded-[20px] md:rounded-[24px] hover:bg-blue-600 transition-all uppercase tracking-widest text-xs shadow-lg">Confirm</button>
             </form>
@@ -294,7 +297,7 @@ function renderCalendar() {
         const card = document.createElement('div');
         card.className = `day-card p-2 rounded-xl border-2 flex flex-col items-center cursor-pointer 
         ${dateStr === selectedDate ? 'active' : 'bg-white border-slate-50'} 
-        ${count >= 16 ? 'full-booked' : ''}`;
+        ${count >= 11 ? 'full-booked' : ''}`;
 
         card.innerHTML = `
             <span>${day.toLocaleDateString('en', {weekday: 'short'})}</span>
@@ -337,12 +340,18 @@ function renderMap() {
     function createScope(id, x, y) {
         const dayB = bookings.filter(b => b.date === selectedDate && b.scopeId == id);
 
-        const hasM = dayB.some(b => b.shifts.includes('morning'));
-        const hasA = dayB.some(b => b.shifts.includes('afternoon'));
+        const totalSlots = 11;
 
-        let color = '#10b981'; // green
-        if (hasM && hasA) color = '#ef4444';
-        else if (hasM || hasA) color = '#f59e0b';
+const bookedSlots = dayB.flatMap(b => b.shifts);
+const uniqueSlots = [...new Set(bookedSlots)];
+
+let color = '#10b981'; // green
+
+if (uniqueSlots.length === totalSlots) {
+    color = '#ef4444'; // full
+} else if (uniqueSlots.length > 0) {
+    color = '#f59e0b'; // partial
+}
 
         const btn = document.createElement('div');
         btn.className = "absolute flex flex-col items-center justify-center rounded-2xl shadow-md text-white font-bold cursor-pointer transition-all active:scale-95";
@@ -429,9 +438,8 @@ function openModal(id) {
 document.getElementById('booking-form').onsubmit = async (e) => {
     e.preventDefault();
 
-    const s = [];
-    if (document.getElementById('shift-morning').checked) s.push('morning');
-    if (document.getElementById('shift-afternoon').checked) s.push('afternoon');
+    const s = Array.from(document.querySelectorAll('#booking-form input[type="checkbox"]:checked'))
+               .map(cb => cb.value);
 
     if (!s.length) return alert("Select shift!");
 
@@ -442,13 +450,13 @@ document.getElementById('booking-form').onsubmit = async (e) => {
 
     const dayB = bookings.filter(b => b.date === selectedDate && b.scopeId == scopeId);
 
-    const hasM = dayB.some(b => b.shifts.includes('morning'));
-    const hasA = dayB.some(b => b.shifts.includes('afternoon'));
+   const alreadyTaken = dayB.flatMap(b => b.shifts);
 
-    //  STEP 2: prevent conflicts
-    if ((s.includes('morning') && hasM) || (s.includes('afternoon') && hasA)) {
-        alert("⚠️ Oops! Someone just booked this slot. Unless you're sitting on their lap, please choose another.");
-        return;
+const conflict = s.some(slot => alreadyTaken.includes(slot));
+
+if (conflict) {
+    alert("⚠️ Oops! Someone just booked this slot. Unless you're sitting on their lap, please choose another.");
+    return;
     }
 
     //  STEP 3: safe to book
