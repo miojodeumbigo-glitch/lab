@@ -149,6 +149,7 @@
                 </div>
                 <button onclick="closeModal()" class="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-slate-50 text-slate-400">&times;</button>
             </div>
+			<div id="slot-info" class="mb-4 text-[10px] text-slate-600 space-y-1"></div>
             <form id="booking-form" class="space-y-6 md:space-y-8">
                 <input type="hidden" id="form-scope-id">
                 <div class="space-y-3">
@@ -392,15 +393,7 @@ btn.innerHTML = `
         btn.onclick = () => {
     const dayB = bookings.filter(b => b.date === selectedDate && b.scopeId == id);
 
-    const myBooking = dayB.find(b => b.name === currentResearcher);
-
-    if (myBooking) {
-        if (confirm("You already booked this. Cancel it?")) {
-            cancelBooking(myBooking.id);
-        }
-        return;
-    }
-
+    
     openModal(id);
 };
 
@@ -454,9 +447,54 @@ function renderLog() {
 function openModal(id) {
     document.getElementById('modal-scope-id').innerText = id;
     document.getElementById('form-scope-id').value = id;
+
+    // RESET all checkboxes
+    document.querySelectorAll('#booking-form input[type="checkbox"]')
+        .forEach(cb => {
+            cb.checked = false;
+            cb.disabled = false;
+            cb.parentElement.classList.remove('opacity-40');
+        });
+
+    const dayB = bookings.filter(b => b.date === selectedDate && b.scopeId == id);
+
+    //  find MY booking
+    const myBooking = dayB.find(b => b.name === currentResearcher);
+
+    // 🧠 collect all taken slots
+    const taken = dayB.flatMap(b => b.shifts);
+
+    // LOOP all checkboxes
+    document.querySelectorAll('#booking-form input[type="checkbox"]').forEach(cb => {
+
+        const slot = cb.value;
+
+        //  If slot is taken by ME → checked
+        if (myBooking && myBooking.shifts.includes(slot)) {
+            cb.checked = true;
+        }
+
+        //  If slot taken by OTHERS → disable
+        if (taken.includes(slot) && (!myBooking || !myBooking.shifts.includes(slot))) {
+            cb.disabled = true;
+            cb.parentElement.classList.add('opacity-40');
+        }
+    });
+
+    //  SHOW WHO BOOKED WHAT
+    const infoBox = document.getElementById('slot-info');
+    if (infoBox) {
+        infoBox.innerHTML = dayB.map(b =>
+            `<div class="text-[10px]">
+                <b>${b.name}</b>: ${b.shifts.join(', ')}
+            </div>`
+        ).join('');
+    }
+
     document.getElementById('booking-modal').classList.remove('hidden');
 }
 
+		
 document.getElementById('booking-form').onsubmit = async (e) => {
     e.preventDefault();
 
@@ -481,6 +519,13 @@ if (conflict) {
     return;
     }
 
+// remove my old booking if exists
+bookings = bookings.filter(b =>
+    !(b.date === selectedDate &&
+      b.scopeId == scopeId &&
+      b.name === currentResearcher)
+);
+	
     //  STEP 3: safe to book
     bookings.push({
         id: Date.now(),
